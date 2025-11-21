@@ -19,7 +19,7 @@ dependencies:
   flutter:
     sdk: flutter
   ios_document_picker: ^0.4.0
-  macos_file_picker: ^0.6.0
+  macos_file_picker: ^0.7.2
   path: ^1.9.0
   saf_util: ^0.11.0
   accessing_security_scoped_resource: ^3.0.0

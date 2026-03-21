@@ -1,6 +1,6 @@
 name: fast_file_picker
 description: "Fast file pickers for Flutter"
-version: 0.4.8
+version: 0.4.9
 homepage: https://github.com/flutter-cavalry/fast_file_picker
 
 environment:
@@ -21,7 +21,7 @@ dependencies:
   ios_document_picker: ^0.4.0
   macos_file_picker: ^0.7.2
   path: ^1.9.0
-  saf_util: ^0.11.0
+  saf_util: ^2.0.0
   accessing_security_scoped_resource: ^3.0.0
 
 dev_dependencies:

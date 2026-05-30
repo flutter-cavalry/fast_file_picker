@@ -1,3 +1,8 @@
+## 1.0.0
+
+- **Breaking**: Migrate to AGP 9
+- **Breaking**: Min Flutter version: 3.44.0
+
 ## 0.4.6
 
 - Make sure action always runs in `tryUseAppleScopedResource`.

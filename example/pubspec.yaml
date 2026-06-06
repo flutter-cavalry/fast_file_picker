@@ -17,7 +17,7 @@ dependencies:
   cupertino_icons: ^1.0.2
   saf_stream: ^3.0.0
   saf_util: ^3.0.0
-  ns_file_coordinator_util: ^0.25.0
+  ns_file_coordinator_util: ^0.26.0
 
 dev_dependencies:
   flutter_test:

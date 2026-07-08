@@ -1,6 +1,6 @@
 name: fast_file_picker
 description: "Fast file pickers for Flutter"
-version: 1.0.1
+version: 1.0.2
 homepage: https://github.com/flutter-cavalry/fast_file_picker
 
 environment:

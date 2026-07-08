@@ -191,6 +191,7 @@ class _MyHomePageState extends State<MyHomePage> {
             }
             // Access granted.
             // Read the file using `ns_file_coordinator_util`.
+            // You can also use Dart IO to read the file path, but it may not trigger iCloud download.
             final bytes = await _nsFileCoordinatorUtil.readFileBytes(file.uri!);
 
             s += 'Bytes: ${_formatBytes(bytes)}\n\n';

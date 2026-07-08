@@ -43,7 +43,9 @@ class FastFilePickerPath {
 **Platform notes:**
 
 - Windows / macOS / Linux: Use Dart IO to access the file path.
-- iOS: call `tryUseAppleScopedResource` first. If access is granted, use `ns_file_coordinator_util` to access the file.
+- iOS: call `tryUseAppleScopedResource` first. If access is granted.
+  - Use Dart IO to access the file path.
+  - To trigger iCloud download, use `ns_file_coordinator_util` to access the file URL.
 - Android: use [saf_stream](https://pub.dev/packages/saf_stream) for file reading or [saf_util](https://pub.dev/packages/saf_util) for file info.
 
 ```dart
@@ -92,7 +94,10 @@ for (final file in files) {
         return;
       }
       // Access granted.
-      // Read the file using `ns_file_coordinator_util`.
+
+      // Read file path with Dart IO.
+      final bytes = await File(file.path!).readAsBytes();
+      // Or use `ns_file_coordinator_util` to read the file URL to trigger iCloud download.
       final bytes = await _nsFileCoordinatorUtil.readFileBytes(file.uri!);
     });
   } else if (file.uri != null && Platform.isAndroid) {
@@ -111,7 +116,9 @@ for (final file in files) {
 **Platform notes:**
 
 - Windows / macOS / Linux: Use Dart IO to access the folder.
-- iOS: call `tryUseAppleScopedResource` to gain access first. If access is granted, use `ns_file_coordinator_util` to access the folder.
+- iOS: call `tryUseAppleScopedResource` to gain access first. If access is granted:
+  - Use Dart IO to access the directory path.
+  - To trigger iCloud download, use `ns_file_coordinator_util` to access the directory URL.
 - Android: use [saf_stream](https://pub.dev/packages/saf_stream) for file access or [saf_util](https://pub.dev/packages/saf_util) for other things.
 
 ```dart
@@ -154,7 +161,11 @@ if (Platform.isIOS) {
       return;
     }
     // Access granted.
-    // Use `ns_file_coordinator_util` to read the folder.
+
+    // Use Dart IO to access the folder.
+    final subFileNames = (await Directory(folder.path!).list().toList())
+        .map((e) => e.path);
+    // Or use `ns_file_coordinator_util` to read the folder URL to trigger iCloud download.
     final subFileNames = await _nsFileCoordinatorUtil
         .listContents(folder.uri!);
 

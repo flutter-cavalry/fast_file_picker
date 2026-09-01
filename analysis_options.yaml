@@ -1,1 +1,4 @@
+analyzer:
+  exclude:
+    - build/**
 include: package:mgenware_dart_lints/flutter_lints.yaml

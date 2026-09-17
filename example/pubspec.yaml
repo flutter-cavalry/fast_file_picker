@@ -19,6 +19,7 @@ dependencies:
   saf_util: ^3.0.0
   ns_file_coordinator_util: ^0.26.0
 
+  material_ui: any
 dev_dependencies:
   flutter_test:
     sdk: flutter

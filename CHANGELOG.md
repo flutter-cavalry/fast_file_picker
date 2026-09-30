@@ -1,3 +1,7 @@
+## 2.0.0
+
+- **Breaking**: removed `useAppleScopedResource`. Now returned paths automatically have apple scoped resource access. But you need call `release` when done with the resource. See README for details.
+
 ## 1.0.0
 
 - **Breaking**: Migrate to AGP 9

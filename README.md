@@ -45,65 +45,108 @@ iOS and macOS picker results acquire security-scoped access automatically.
 Call `release()` after finishing with each result. It is a no-op for results
 from other platforms or `file_selector`.
 
+### Picker method signatures
+
+The picker methods accept `XTypeGroup` from `file_selector`. These signatures
+show the public parameters; placeholder bodies stand in for the implementation.
+
+```dart
+class FastFilePicker {
+  static Future<FastFilePickerPath?> pickFile({
+    List<XTypeGroup> acceptedTypeGroups = const <XTypeGroup>[],
+    String? initialDirectory,
+    String? confirmButtonText,
+    bool? useFileSelector,
+  }) async => throw UnimplementedError();
+
+  static Future<List<FastFilePickerPath>?> pickMultipleFiles({
+    List<XTypeGroup> acceptedTypeGroups = const <XTypeGroup>[],
+    String? initialDirectory,
+    String? confirmButtonText,
+    bool? useFileSelector,
+  }) async => throw UnimplementedError();
+
+  static Future<FastFilePickerPath?> pickFolder({
+    required bool writePermission,
+    bool? useFileSelector,
+    String? initialDirectory,
+    String? confirmButtonText,
+  }) async => throw UnimplementedError();
+
+  static Future<String?> pickSaveFile({
+    List<XTypeGroup> acceptedTypeGroups = const <XTypeGroup>[],
+    String? initialDirectory,
+    String? suggestedName,
+    String? confirmButtonText,
+    bool? useFileSelector,
+  }) async => throw UnimplementedError();
+}
+```
+
+Set `useFileSelector: true` to use the `file_selector` implementation.
+Otherwise, the platform-specific picker is used where available.
+
 ### Pick a file or multiple files
 
 **Platform notes:**
 
-- Windows / macOS / Linux: Use Dart IO to access the file path.
-- iOS: Security-scoped access is acquired automatically.
-  - Use Dart IO to access the file path.
-  - To trigger iCloud download, use `ns_file_coordinator_util` to access the file URL.
+- iOS / macOS / Windows / Linux: Use Dart IO to access the file path.
+  - iOS / macOS: Security-scoped access is acquired automatically.
+    - To trigger iCloud download, use `ns_file_coordinator_util` to access the file URL.
 - Android: use [saf_stream](https://pub.dev/packages/saf_stream) for file reading or [saf_util](https://pub.dev/packages/saf_util) for file info.
 
-```dart
-class FastFilePicker {
-  /// Picks a file and return a [FastFilePickerPath].
-  /// If the user cancels the picker, it returns `null`.
-  ///
-  /// [useFileSelector] whether to force using the internal file_picker plugin.
-  /// [acceptedTypeGroups] is a list of [XTypeGroup] that specifies the accepted file types.
-  /// [initialDirectory] is the initial directory to open the picker.
-  /// [confirmButtonText] is the text to display on the confirm button.
-  static Future<FastFilePickerPath?> pickFile(/* Same params as file_selector */);
+Example: pick one file
 
-  /// Picks multiple files and return a list of [FastFilePickerPath].
-  /// If the user cancels the picker, it returns `null`.
-  ///
-  /// [useFileSelector] whether to force using the internal file_picker plugin.
-  /// [acceptedTypeGroups] is a list of [XTypeGroup] that specifies the accepted file types.
-  /// [initialDirectory] is the initial directory to open the picker.
-  /// [confirmButtonText] is the text to display on the confirm button.
-  static Future<List<FastFilePickerPath>?> pickMultipleFiles(/* Same params as file_selector */);
+```dart
+// Pick one file and pass it to the same handler used for multiple files (see below).
+final res = await FastFilePicker.pickFile();
+if (res == null) {
+  print('Cancelled');
+} else {
+  await _readFiles([res]);
 }
 ```
 
-Example:
+Example: pick multiple files
 
 ```dart
+// Use pickMultipleFiles when the user should be able to select more than one.
 final files = await FastFilePicker.pickMultipleFiles();
 if (files == null) {
-  setState(() {
-    _output = 'User canceled the picker';
-  });
-  return;
+  print('Cancelled');
+} else {
+  await _readFiles(files);
 }
+```
 
-// Handle selected files.
-for (final file in files) {
+The example app uses this helper to read selected files and release each
+result's access when finished:
+
+```dart
+Future<void> _readFiles(List<FastFilePickerPath> files) async {
   try {
-    if (Platform.isIOS) {
-      // Read file path with Dart IO.
-      final bytes = await File(file.path!).readAsBytes();
-      // Or use `ns_file_coordinator_util` to read the file URL to trigger iCloud download.
-      final bytes = await _nsFileCoordinatorUtil.readFileBytes(file.uri!);
-    } else if (file.uri != null && Platform.isAndroid) {
-      // For example, use [saf_stream] package to read the file.
-      final bytes = await _safStream.readFileBytes(file.uri!);
-    } else if (file.path != null) {
-      final bytes = await File(file.path!).readAsBytes();
+    for (final file in files) {
+      try {
+        // Include the selected item in the result shown by the example app.
+        print('File: $file');
+
+        // Read the file directly when the picker returns a local path.
+        if (file.path != null) {
+          final bytes = await File(file.path!).readAsBytes();
+          print('Bytes: ${_formatBytes(bytes)}');
+        } else if (file.uri != null && Platform.isAndroid) {
+          // Android document selections are URIs; read them with saf_stream.
+          final bytes = await _safStream.readFileBytes(file.uri!);
+          print('Bytes: ${_formatBytes(bytes)}');
+        }
+      } finally {
+        // Releases security-scoped access on iOS/macOS; no-op elsewhere.
+        await file.release();
+      }
     }
-  } finally {
-    await file.release();
+
+  } catch (err) {
+    print('Error: $err');
   }
 }
 ```
@@ -112,72 +155,39 @@ for (final file in files) {
 
 **Platform notes:**
 
-- Windows / macOS / Linux: Use Dart IO to access the folder.
-- iOS: Security-scoped access is acquired automatically.
-  - Use Dart IO to access the directory path.
-  - To trigger iCloud download, use `ns_file_coordinator_util` to access the directory URL.
+- iOS / macOS / Windows / Linux: Use Dart IO to access the folder.
+  - iOS / macOS: Security-scoped access is acquired automatically.
+    - To trigger iCloud download, use `ns_file_coordinator_util` to access the file URL.
 - Android: use [saf_stream](https://pub.dev/packages/saf_stream) for file access or [saf_util](https://pub.dev/packages/saf_util) for other things.
-
-```dart
-class FastFilePicker {
-  /// Picks a folder and return a [FastFilePickerPath].
-  /// If the user cancels the picker, it returns `null`.
-  ///
-  /// [writePermission] is only applicable on Android.
-  /// [useFileSelector] whether to force using the internal file_picker plugin.
-  /// [initialDirectory] is the initial directory to open the picker.
-  /// [confirmButtonText] is the text to display on the confirm button.
-  static Future<FastFilePickerPath?> pickFolder(
-      {required bool writePermission,
-      /* Same params as file_selector */});
-}
-```
 
 Example:
 
 ```dart
-// Handle selected folder.
-final folder = await FastFilePicker.pickFolder(
-    writePermission: false);
-if (folder == null) {
-  setState(() {
-    _output = 'Cancelled';
-  });
-  return;
-}
 try {
-  if (Platform.isIOS) {
-    // Use Dart IO to access the folder.
-    final subFileNames = (await Directory(folder.path!).list().toList())
-        .map((e) => e.path);
-    // Or use `ns_file_coordinator_util` to read the folder URL to trigger iCloud download.
-    final subFileNames = await _nsFileCoordinatorUtil
-        .listContents(folder.uri!);
-
-    setState(() {
-      _output =
-          'Folder: $folder\n\nSubfiles: $subFileNames';
-    });
-  } else if (Platform.isAndroid && folder.uri != null) {
-    final subFileNames = (await _safUtil.list(folder.uri!))
-        .map((e) => e.name);
-
-    setState(() {
-      _output =
-          'Folder: $folder\n\nSubfiles: $subFileNames';
-    });
-  } else if (folder.path != null) {
-    final subFileNames =
-        (await Directory(folder.path!).list().toList())
-            .map((e) => e.path);
-
-    setState(() {
-      _output =
-          'Folder: $folder\n\nSubfiles: $subFileNames';
-    });
+  final folder = await FastFilePicker.pickFolder(writePermission: false);
+  if (folder == null) {
+    print('Cancelled');
+    return;
   }
-} finally {
-  await folder.release();
+
+  try {
+    // Use Dart IO when the picker returns a local path.
+    if (folder.path != null) {
+      final subFileNames = (await Directory(folder.path!).list().toList())
+          .map((entry) => entry.path);
+        print('Folder: $folder\n\nSubfiles: $subFileNames');
+    } else if (Platform.isAndroid && folder.uri != null) {
+      // Android returns a URI, which saf_util can list.
+      final subFileNames = (await _safUtil.list(folder.uri!))
+          .map((entry) => entry.name);
+        print('Folder: $folder\n\nSubfiles: $subFileNames');
+    }
+  } finally {
+    // Release the security-scoped resource after the folder is accessed.
+    await folder.release();
+  }
+} catch (err) {
+  print(err);
 }
 ```
 
@@ -188,31 +198,16 @@ try {
 - iOS / Android: Not supported. It's recommended to use mobile share menu to save files.
 - Windows / macOS / Linux: Use Dart IO to handle the save path.
 
-```dart
-class FastFilePicker {
-  /// Picks a save file location and return a [String] path.
-  /// You can optionally specify a default file name via [suggestedName].
-  /// If the user cancels the picker, it returns `null`.
-  /// [useFileSelector] whether to force using the internal file_picker plugin.
-  /// [suggestedName] is the default file name.
-  /// [acceptedTypeGroups] is a list of [XTypeGroup] that specifies the accepted file types.
-  /// [initialDirectory] is the initial directory to open the picker.
-  /// [confirmButtonText] is the text to display on the confirm button.
-  static Future<String?> pickSaveFile(/* Same params as file_selector */);
-}
-```
-
 Example:
 
 ```dart
-final savePath = await FastFilePicker.pickSaveFile();
-if (savePath == null) {
-  setState(() {
-    _output = 'User canceled the picker';
-  });
-  return;
+try {
+  final savePath = await FastFilePicker.pickSaveFile();
+  // A null path means the user canceled the save dialog.
+  print(savePath ?? 'Cancelled');
+} catch (err) {
+  print(err);
 }
-// Handle save path using Dart IO.
 ```
 
 ### Switch to `file_selector` implementation

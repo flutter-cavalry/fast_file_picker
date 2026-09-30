@@ -12,8 +12,9 @@ class FastFilePickerPath {
   final String name;
   final String? path;
   final String? uri;
+  final Future<void> Function()? _release;
 
-  FastFilePickerPath._(this.name, this.path, this.uri);
+  FastFilePickerPath._(this.name, this.path, this.uri, [this._release]);
 
   static FastFilePickerPath fromUri(String name, String uri) {
     return FastFilePickerPath._(name, null, uri);
@@ -24,8 +25,35 @@ class FastFilePickerPath {
   }
 
   static FastFilePickerPath fromPathAndUri(
-      String name, String path, String uri) {
+    String name,
+    String path,
+    String uri,
+  ) {
     return FastFilePickerPath._(name, path, uri);
+  }
+
+  static FastFilePickerPath _fromIosPath(IosDocumentPickerPath pickerPath) {
+    return FastFilePickerPath._(
+      pickerPath.name,
+      pickerPath.path,
+      pickerPath.url,
+      pickerPath.release,
+    );
+  }
+
+  static FastFilePickerPath _fromMacosPath(MacosFilePickerPath pickerPath) {
+    return FastFilePickerPath._(
+      pickerPath.name,
+      pickerPath.path,
+      pickerPath.url,
+      pickerPath.release,
+    );
+  }
+
+  /// Releases security-scoped access held by an iOS or macOS picker result.
+  /// This has no effect for paths returned by other picker implementations.
+  Future<void> release() async {
+    await _release?.call();
   }
 
   @override
@@ -34,17 +62,14 @@ class FastFilePickerPath {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'name': name,
-      'path': path,
-      'uri': uri,
-    };
+    return {'name': name, 'path': path, 'uri': uri};
   }
 
   FastFilePickerPath.fromJson(Map<String, dynamic> json)
-      : name = json['name'] as String,
-        path = json['path'] as String?,
-        uri = json['uri'] as String?;
+    : name = json['name'] as String,
+      path = json['path'] as String?,
+      uri = json['uri'] as String?,
+      _release = null;
 }
 
 final SafUtil _safUtil = SafUtil();
@@ -109,7 +134,9 @@ class FastFilePicker {
   }) async {
     if (Platform.isAndroid && useFileSelector != true) {
       final res = await _safUtil.pickDirectory(
-          writePermission: writePermission, initialUri: initialDirectory);
+        writePermission: writePermission,
+        initialUri: initialDirectory,
+      );
       if (res == null) {
         return null;
       }
@@ -117,29 +144,30 @@ class FastFilePicker {
     }
     if (Platform.isIOS && useFileSelector != true) {
       final iosPicker = IosDocumentPicker();
-      final res =
-          (await iosPicker.pick(IosDocumentPickerType.directory))?.first;
+      final res = (await iosPicker.pick(
+        IosDocumentPickerType.directory,
+      ))?.first;
       if (res == null) {
         return null;
       }
-      return FastFilePickerPath.fromPathAndUri(res.name, res.path, res.url);
+      return FastFilePickerPath._fromIosPath(res);
     }
     if (Platform.isMacOS && useFileSelector != true) {
       final macosPicker = MacosFilePicker();
       final res = (await macosPicker.pick(
         MacosFilePickerMode.folder,
         initialDirectory: initialDirectory,
-      ))
-          ?.first;
+      ))?.first;
       if (res == null) {
         return null;
       }
-      return FastFilePickerPath.fromPathAndUri(res.name, res.path, res.url);
+      return FastFilePickerPath._fromMacosPath(res);
     }
 
     final folderPath = await getDirectoryPath(
-        initialDirectory: initialDirectory,
-        confirmButtonText: confirmButtonText);
+      initialDirectory: initialDirectory,
+      confirmButtonText: confirmButtonText,
+    );
     if (folderPath == null) {
       return null;
     }
@@ -165,22 +193,23 @@ class FastFilePicker {
     if (Platform.isMacOS && useFileSelector != true) {
       final macosPicker = MacosFilePicker();
       final utiTypes = _typeGroupsToUtiList(acceptedTypeGroups);
-      final extensions = _typeGroupsToExtensionList(acceptedTypeGroups);
 
-      final res = await macosPicker.pick(MacosFilePickerMode.saveFile,
-          defaultName: suggestedName,
-          allowedUtiTypes: utiTypes,
-          allowedFileExtensions: extensions);
+      final res = await macosPicker.pick(
+        MacosFilePickerMode.saveFile,
+        defaultName: suggestedName,
+        allowedUtiTypes: utiTypes,
+      );
       if (res == null) {
         return null;
       }
       return res.first.path;
     }
     final res = await getSaveLocation(
-        suggestedName: suggestedName,
-        initialDirectory: initialDirectory,
-        acceptedTypeGroups: acceptedTypeGroups,
-        confirmButtonText: confirmButtonText);
+      suggestedName: suggestedName,
+      initialDirectory: initialDirectory,
+      acceptedTypeGroups: acceptedTypeGroups,
+      confirmButtonText: confirmButtonText,
+    );
     return res?.path;
   }
 
@@ -201,33 +230,31 @@ class FastFilePicker {
     if (Platform.isIOS && useFileSelector != true) {
       final iosPicker = IosDocumentPicker();
       final utiTypes = _typeGroupsToUtiList(acceptedTypeGroups);
-      final files = await iosPicker.pick(IosDocumentPickerType.file,
-          multiple: allowsMultiple ?? false, allowedUtiTypes: utiTypes);
+      final files = await iosPicker.pick(
+        IosDocumentPickerType.file,
+        multiple: allowsMultiple ?? false,
+        allowedUtiTypes: utiTypes,
+      );
       if (files == null) {
         return null;
       }
-      final res = files
-          .map((e) => FastFilePickerPath.fromPathAndUri(e.name, e.path, e.url))
-          .nonNulls
-          .toList();
+      final res = files.map(FastFilePickerPath._fromIosPath).nonNulls.toList();
       return res.isEmpty ? null : res;
     }
     if (Platform.isMacOS && useFileSelector != true) {
       final macosPicker = MacosFilePicker();
       final utiTypes = _typeGroupsToUtiList(acceptedTypeGroups);
-      final extensions = _typeGroupsToExtensionList(acceptedTypeGroups);
 
       final files = await macosPicker.pick(
         MacosFilePickerMode.file,
         allowsMultiple: allowsMultiple ?? false,
         allowedUtiTypes: utiTypes,
-        allowedFileExtensions: extensions,
       );
       if (files == null) {
         return null;
       }
       final res = files
-          .map((e) => FastFilePickerPath.fromPathAndUri(e.name, e.path, e.url))
+          .map(FastFilePickerPath._fromMacosPath)
           .nonNulls
           .toList();
       return res.isEmpty ? null : res;
@@ -235,12 +262,15 @@ class FastFilePicker {
     if (Platform.isAndroid && useFileSelector != true) {
       final mimeTypes = _typeGroupsToMimeList(acceptedTypeGroups);
       final files = await _safUtil.pickFiles(
-          multiple: allowsMultiple ?? false, mimeTypes: mimeTypes);
+        multiple: allowsMultiple ?? false,
+        mimeTypes: mimeTypes,
+      );
       if (files == null || files.isEmpty) {
         return null;
       }
-      final res =
-          files.map((e) => FastFilePickerPath.fromUri(e.name, e.uri)).toList();
+      final res = files
+          .map((e) => FastFilePickerPath.fromUri(e.name, e.uri))
+          .toList();
       return res.isEmpty ? null : res;
     }
 
@@ -253,8 +283,8 @@ class FastFilePicker {
       return files.isEmpty
           ? null
           : files
-              .map((e) => FastFilePickerPath.fromPath(e.name, e.path))
-              .toList();
+                .map((e) => FastFilePickerPath.fromPath(e.name, e.path))
+                .toList();
     }
 
     final file = await openFile(
@@ -277,14 +307,11 @@ class FastFilePicker {
   }
 
   static List<String>? _typeGroupsToMimeList(List<XTypeGroup> typeGroups) {
-    final list =
-        typeGroups.map((e) => e.mimeTypes).nonNulls.expand((i) => i).toList();
-    return list.isEmpty ? null : list;
-  }
-
-  static List<String>? _typeGroupsToExtensionList(List<XTypeGroup> typeGroups) {
-    final list =
-        typeGroups.map((e) => e.extensions).nonNulls.expand((i) => i).toList();
+    final list = typeGroups
+        .map((e) => e.mimeTypes)
+        .nonNulls
+        .expand((i) => i)
+        .toList();
     return list.isEmpty ? null : list;
   }
 }

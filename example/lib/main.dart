@@ -3,7 +3,6 @@ import 'dart:typed_data';
 
 import 'package:fast_file_picker/fast_file_picker.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:ns_file_coordinator_util/ns_file_coordinator_util.dart';
 import 'package:saf_stream/saf_stream.dart';
 import 'package:saf_util/saf_util.dart';
 
@@ -39,7 +38,6 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   final _safStream = SafStream();
   final _safUtil = SafUtil();
-  final _nsFileCoordinatorUtil = NsFileCoordinatorUtil();
 
   String _output = '';
 
@@ -97,50 +95,31 @@ class _MyHomePageState extends State<MyHomePage> {
                         });
                         return;
                       }
-                      if (Platform.isIOS) {
-                        // Handle iOS folder.
-
-                        // Use [tryUseAppleScopedResource] to request access to the folder.
-                        await folder.tryUseAppleScopedResource(
-                            (hasAccess, folder) async {
-                          if (!hasAccess) {
-                            setState(() {
-                              _output = 'No access to folder';
-                            });
-                            return;
-                          }
-                          // Access granted.
-                          // Use `ns_file_coordinator_util` to read the folder.
-                          final subFileNames = await _nsFileCoordinatorUtil
-                              .listContents(folder.uri!);
+                      try {
+                        if (folder.path != null) {
+                          final subFileNames =
+                              (await Directory(folder.path!).list().toList())
+                                  .map((e) => e.path);
 
                           setState(() {
                             _output =
                                 'Folder: $folder\n\nSubfiles: $subFileNames';
                           });
-                        });
-                      } else if (Platform.isAndroid && folder.uri != null) {
-                        // Handle Android folder.
+                        } else if (Platform.isAndroid && folder.uri != null) {
+                          // Use [saf_util] package to list files in the folder.
+                          // Or use [saf_stream] package to read the files.
+                          final subFileNames =
+                              (await _safUtil.list(folder.uri!))
+                                  .map((e) => e.name);
 
-                        // Use [saf_util] package to list files in the folder.
-                        // Or use [saf_stream] package to read the files.
-                        final subFileNames = (await _safUtil.list(folder.uri!))
-                            .map((e) => e.name);
-
-                        setState(() {
-                          _output =
-                              'Folder: $folder\n\nSubfiles: $subFileNames';
-                        });
-                      } else if (folder.path != null) {
-                        // Handle Windows / macOS / Linux folder.
-                        final subFileNames =
-                            (await Directory(folder.path!).list().toList())
-                                .map((e) => e.path);
-
-                        setState(() {
-                          _output =
-                              'Folder: $folder\n\nSubfiles: $subFileNames';
-                        });
+                          setState(() {
+                            _output =
+                                'Folder: $folder\n\nSubfiles: $subFileNames';
+                          });
+                        }
+                      } finally {
+                        // Release the iOS/macOS security-scoped resource.
+                        await folder.release();
                       }
                     } catch (err) {
                       setState(() {
@@ -177,36 +156,24 @@ class _MyHomePageState extends State<MyHomePage> {
     try {
       String s = '';
       for (final file in files) {
-        // Add file path to output.
-        // ignore: use_string_buffers
-        s += 'File: $file\n';
+        try {
+          // Add file path to output.
+          // ignore: use_string_buffers
+          s += 'File: $file\n';
 
-        if (Platform.isIOS) {
-          // Handle iOS file.
-          // Use [tryUseAppleScopedResource] to request access to the file.
-          await file.tryUseAppleScopedResource((hasAccess, file) async {
-            if (!hasAccess) {
-              s += 'No access to file\n\n';
-              return;
-            }
-            // Access granted.
-            // Read the file using `ns_file_coordinator_util`.
-            // You can also use Dart IO to read the file path, but it may not trigger iCloud download.
-            final bytes = await _nsFileCoordinatorUtil.readFileBytes(file.uri!);
+          if (file.path != null) {
+            final bytes = await File(file.path!).readAsBytes();
 
             s += 'Bytes: ${_formatBytes(bytes)}\n\n';
-          });
-        } else if (file.uri != null && Platform.isAndroid) {
-          // Handle Android file.
-          // For example, use [saf_stream] package to read the file.
-          final bytes = await _safStream.readFileBytes(file.uri!);
+          } else if (file.uri != null && Platform.isAndroid) {
+            // For example, use [saf_stream] package to read the file.
+            final bytes = await _safStream.readFileBytes(file.uri!);
 
-          s += 'Bytes: ${_formatBytes(bytes)}\n\n';
-        } else if (file.path != null) {
-          // Handle Windows / macOS / Linux file.
-          final bytes = await File(file.path!).readAsBytes();
-
-          s += 'Bytes: ${_formatBytes(bytes)}\n\n';
+            s += 'Bytes: ${_formatBytes(bytes)}\n\n';
+          }
+        } finally {
+          // Release the iOS/macOS security-scoped resource.
+          await file.release();
         }
       }
 

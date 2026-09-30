@@ -14,6 +14,9 @@ class FastFilePickerPath {
   final String? uri;
   final Future<void> Function()? _release;
 
+  /// Whether [release] must be called to release security-scoped access.
+  bool get canRelease => _release != null;
+
   FastFilePickerPath._(this.name, this.path, this.uri, [this._release]);
 
   static FastFilePickerPath fromUri(String name, String uri) {

@@ -45,47 +45,6 @@ iOS and macOS picker results acquire security-scoped access automatically.
 Call `release()` after finishing with each result. It is a no-op for results
 from other platforms or `file_selector`.
 
-### Picker method signatures
-
-The picker methods accept `XTypeGroup` from `file_selector`. These signatures
-show the public parameters; placeholder bodies stand in for the implementation.
-
-```dart
-class FastFilePicker {
-  static Future<FastFilePickerPath?> pickFile({
-    List<XTypeGroup> acceptedTypeGroups = const <XTypeGroup>[],
-    String? initialDirectory,
-    String? confirmButtonText,
-    bool? useFileSelector,
-  }) async => throw UnimplementedError();
-
-  static Future<List<FastFilePickerPath>?> pickMultipleFiles({
-    List<XTypeGroup> acceptedTypeGroups = const <XTypeGroup>[],
-    String? initialDirectory,
-    String? confirmButtonText,
-    bool? useFileSelector,
-  }) async => throw UnimplementedError();
-
-  static Future<FastFilePickerPath?> pickFolder({
-    required bool writePermission,
-    bool? useFileSelector,
-    String? initialDirectory,
-    String? confirmButtonText,
-  }) async => throw UnimplementedError();
-
-  static Future<String?> pickSaveFile({
-    List<XTypeGroup> acceptedTypeGroups = const <XTypeGroup>[],
-    String? initialDirectory,
-    String? suggestedName,
-    String? confirmButtonText,
-    bool? useFileSelector,
-  }) async => throw UnimplementedError();
-}
-```
-
-Set `useFileSelector: true` to use the `file_selector` implementation.
-Otherwise, the platform-specific picker is used where available.
-
 ### Pick a file or multiple files
 
 **Platform notes:**

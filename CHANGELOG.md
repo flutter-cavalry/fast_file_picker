@@ -1,6 +1,8 @@
 ## 2.0.0
 
 - **Breaking**: removed `useAppleScopedResource`. Now returned paths automatically have apple scoped resource access. But you need call `release` when done with the resource. See README for details.
+- **Breaking**: bump min deployment target to iOS 15
+- **Breaking**: UIScene adoption is required.
 
 ## 1.0.0
 

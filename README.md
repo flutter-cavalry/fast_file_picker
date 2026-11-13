@@ -4,6 +4,8 @@
 
 `fast_file_picker` is a fast file picker for Flutter. To achieve the best performance, it returns OS file info directly and never performs any file copying or conversion. It supports picking files, folders, and save paths on all platforms. Based on [file_selector](https://pub.dev/packages/file_selector).
 
+> Starting from v2.0.0, [UIScene adoption](https://docs.flutter.dev/release/breaking-changes/uiscenedelegate) is required.
+
 |                  | iOS                | Android       | macOS              | Windows / Linux |
 | ---------------- | ------------------ | ------------- | ------------------ | --------------- |
 | Pick files       | ✅ (Name/Path/URL) | ✅ (Name/Uri) | ✅ (Name/Path/URL) | ✅ (Name/Path)  |

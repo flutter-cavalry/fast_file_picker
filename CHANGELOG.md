@@ -1,3 +1,7 @@
+## 2.1.0
+
+- Add an identifier to `pickFolder` for restoring native dialog state on macOS and Windows.
+
 ## 2.0.0
 
 - **Breaking**: removed `useAppleScopedResource`. Now returned paths automatically have apple scoped resource access. But you need call `release` when done with the resource. See README for details.

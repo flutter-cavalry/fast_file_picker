@@ -121,6 +121,20 @@ Future<void> _readFiles(List<FastFilePickerPath> files) async {
     - To trigger iCloud download, use `ns_file_coordinator_util` to access the file URL.
 - Android: use [saf_stream](https://pub.dev/packages/saf_stream) for file access or [saf_util](https://pub.dev/packages/saf_util) for other things.
 
+On macOS and Windows, pass an `identifier` to let the native dialog remember
+its state separately for each identifier across app launches:
+
+```dart
+final folder = await FastFilePicker.pickFolder(
+  writePermission: false,
+  identifier: 'documents',
+);
+```
+
+The identifier is ignored when `initialDirectory` is provided, when
+`useFileSelector: true`, and on other platforms. Native dialog state can include
+the last visited directory, which is not necessarily the last selected folder.
+
 Example:
 
 ```dart

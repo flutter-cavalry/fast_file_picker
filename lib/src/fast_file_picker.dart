@@ -7,6 +7,8 @@ import 'package:macos_file_picker/macos_file_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:saf_util/saf_util.dart';
 
+import 'windows_folder_picker.dart';
+
 /// Represents a picker path that could be either a file path or a URI.
 class FastFilePickerPath {
   final String name;
@@ -126,13 +128,17 @@ class FastFilePicker {
   /// If the user cancels the picker, it returns `null`.
   ///
   /// [writePermission] is only applicable on Android.
-  /// [useFileSelector] whether to force using the internal file_picker plugin.
+  /// [useFileSelector] whether to force using the file_selector plugin.
   /// [initialDirectory] is the initial directory to open the picker.
+  /// [identifier] identifies persisted native dialog state on
+  /// macOS and Windows. It is ignored when [initialDirectory] is set, when
+  /// [useFileSelector] is true, and on other platforms.
   /// [confirmButtonText] is the text to display on the confirm button.
   static Future<FastFilePickerPath?> pickFolder({
     required bool writePermission,
     bool? useFileSelector,
     String? initialDirectory,
+    String? identifier,
     String? confirmButtonText,
   }) async {
     if (Platform.isAndroid && useFileSelector != true) {
@@ -160,6 +166,7 @@ class FastFilePicker {
       final res = (await macosPicker.pick(
         MacosFilePickerMode.folder,
         initialDirectory: initialDirectory,
+        identifier: initialDirectory == null ? identifier : null,
       ))?.first;
       if (res == null) {
         return null;
@@ -167,10 +174,19 @@ class FastFilePicker {
       return FastFilePickerPath._fromMacosPath(res);
     }
 
-    final folderPath = await getDirectoryPath(
-      initialDirectory: initialDirectory,
-      confirmButtonText: confirmButtonText,
-    );
+    final folderPath =
+        Platform.isWindows &&
+            useFileSelector != true &&
+            initialDirectory == null &&
+            identifier != null
+        ? await pickWindowsFolderWithIdentifier(
+            identifier,
+            confirmButtonText: confirmButtonText,
+          )
+        : await getDirectoryPath(
+            initialDirectory: initialDirectory,
+            confirmButtonText: confirmButtonText,
+          );
     if (folderPath == null) {
       return null;
     }

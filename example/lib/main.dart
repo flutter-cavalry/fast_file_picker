@@ -40,6 +40,7 @@ class _MyHomePageState extends State<MyHomePage> {
   final _safUtil = SafUtil();
 
   String _output = '';
+  String _folderIdentifier = '';
 
   @override
   Widget build(BuildContext context) {
@@ -83,12 +84,23 @@ class _MyHomePageState extends State<MyHomePage> {
                   },
                   child: const Text('Pick Files')),
               const SizedBox(height: 10),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Folder picker identifier (optional)',
+                  helperText: 'Supported on macOS and Windows',
+                ),
+                onChanged: (value) => _folderIdentifier = value,
+              ),
+              const SizedBox(height: 10),
               OutlinedButton(
                   onPressed: () async {
                     try {
                       // Handle selected folder.
                       final folder = await FastFilePicker.pickFolder(
-                          writePermission: false);
+                        writePermission: false,
+                        identifier:
+                            _folderIdentifier.isEmpty ? null : _folderIdentifier,
+                      );
                       if (folder == null) {
                         setState(() {
                           _output = 'Cancelled';
